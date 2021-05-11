@@ -347,6 +347,7 @@ public class NexmarkUtils {
    * Instants guaranteed to be strictly before and after all event timestamps, and which won't be
    * subject to underflow/overflow.
    */
+
   public static final Instant BEGINNING_OF_TIME = new Instant(0).plus(Duration.standardDays(365));
 
   public static final Instant END_OF_TIME =
@@ -410,6 +411,7 @@ public class NexmarkUtils {
    */
   public static PTransform<PBegin, PCollection<Event>> streamEventsSource(
       NexmarkConfiguration configuration) {
+    System.out.println("Step NexmarkUtils:Generators streamEventsSource");
     return Read.from(
         new UnboundedEventSource(
             NexmarkUtils.standardGeneratorConfig(configuration),

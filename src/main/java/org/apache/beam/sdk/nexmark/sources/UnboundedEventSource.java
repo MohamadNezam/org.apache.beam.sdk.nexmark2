@@ -33,6 +33,7 @@ import org.apache.beam.sdk.nexmark.sources.generator.GeneratorConfig;
 import org.apache.beam.sdk.options.PipelineOptions;
 import org.apache.beam.sdk.transforms.windowing.BoundedWindow;
 import org.apache.beam.sdk.values.TimestampedValue;
+import org.apache.log4j.Level;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.joda.time.Duration;
 import org.joda.time.Instant;
@@ -74,35 +75,31 @@ public class UnboundedEventSource extends UnboundedSource<Event, GeneratorCheckp
     this.numEventGenerators = numEventGenerators;
     this.watermarkHoldbackSec = watermarkHoldbackSec;
     this.isRateLimited = isRateLimited;
+
   }
 
   /** A reader to pull events from the generator. */
   private class EventReader extends UnboundedReader<Event> {
     /** Generator we are reading from. */
     private final Generator generator;
-
     /**
      * Current watermark (ms since epoch). Initially set to beginning of time. Then updated to be
      * the time of the next generated event. Then, once all events have been generated, set to the
      * end of time.
      */
     private long watermark;
-
     /**
      * Current backlog (ms), as delay between timestamp of last returned event and the timestamp we
      * should be up to according to wall-clock time. Used only for logging.
      */
     private long backlogDurationMs;
-
     /**
      * Current backlog, as estimated number of event bytes we are behind, or null if unknown.
      * Reported to callers.
      */
     private @Nullable Long backlogBytes;
-
     /** Wallclock time (ms since epoch) we last reported the backlog, or -1 if never reported. */
     private long lastReportedBacklogWallclock;
-
     /**
      * Event time (ms since epoch) of pending event at last reported backlog, or -1 if never
      * calculated.
@@ -122,27 +119,40 @@ public class UnboundedEventSource extends UnboundedSource<Event, GeneratorCheckp
     private final Queue<Generator.NextEvent> heldBackEvents = new PriorityQueue<>();
 
     public EventReader(Generator generator) {
+      System.out.println("000  EventReader");
+
       this.generator = generator;
       watermark = NexmarkUtils.BEGINNING_OF_TIME.getMillis();
       lastReportedBacklogWallclock = -1;
       pendingEventWallclockTime = -1;
       timestampAtLastReportedBacklogMs = -1;
+
+
     }
 
     public EventReader(GeneratorConfig config) {
+
       this(new Generator(config));
+      System.out.println("001  EventReader");
+      //NexmarkUtils.console("saved javascript to file %s.", config);
     }
 
     @Override
     public boolean start() {
+      System.out.println("002  start");
+      System.out.println("Step UnboundedEventSource: starting unbounded generator");
+
       LOG.trace("starting unbounded generator {}", generator);
       return advance();
     }
 
     @Override
     public boolean advance() {
+      System.out.println("003 advance");
+     // System.out.println("  ckp 01 ");
+      //NexmarkUtils.console("saved javascript to file %s.", generator);
       long now = System.currentTimeMillis();
-
+      NexmarkUtils.console("pendingEvent %s.", pendingEvent);
       while (pendingEvent == null) {
         if (!generator.hasNext() && heldBackEvents.isEmpty()) {
           // No more events, EVER.
@@ -152,10 +162,11 @@ public class UnboundedEventSource extends UnboundedSource<Event, GeneratorCheckp
           if (watermark < BoundedWindow.TIMESTAMP_MAX_VALUE.getMillis()) {
             watermark = BoundedWindow.TIMESTAMP_MAX_VALUE.getMillis();
             LOG.trace("stopped unbounded generator {}", generator);
+            //NexmarkUtils.console("stopped unbounded generator {}", generator);
           }
           return false;
         }
-
+        NexmarkUtils.console("pendingEvent next");
         Generator.NextEvent next = heldBackEvents.peek();
         if (next != null && next.wallclockTimestamp <= now) {
           // Time to use the held-back event.
@@ -208,6 +219,8 @@ public class UnboundedEventSource extends UnboundedSource<Event, GeneratorCheckp
     }
 
     private void updateBacklog(long now, long newBacklogDurationMs) {
+      System.out.println("004 updateBacklog");
+   //   System.out.println("  ckp 02 ");
       backlogDurationMs = newBacklogDurationMs;
       long interEventDelayUs = generator.currentInterEventDelayUs();
       if (interEventDelayUs != 0) {
@@ -241,6 +254,8 @@ public class UnboundedEventSource extends UnboundedSource<Event, GeneratorCheckp
 
     @Override
     public Event getCurrent() {
+      System.out.println("005 getCurrent");
+   //   System.out.println("  ckp 03 ");
       if (currentEvent == null) {
         throw new NoSuchElementException();
       }
@@ -249,6 +264,7 @@ public class UnboundedEventSource extends UnboundedSource<Event, GeneratorCheckp
 
     @Override
     public Instant getCurrentTimestamp() {
+      System.out.println("  ckp 04  getCurrentTimestamp");
       if (currentEvent == null) {
         throw new NoSuchElementException();
       }
@@ -257,31 +273,37 @@ public class UnboundedEventSource extends UnboundedSource<Event, GeneratorCheckp
 
     @Override
     public void close() {
+      System.out.println("  ckp 05  close");
       // Nothing to close.
     }
 
     @Override
     public UnboundedEventSource getCurrentSource() {
+      System.out.println("  ckp 06 getCurrentSource ");
       return UnboundedEventSource.this;
     }
 
     @Override
     public Instant getWatermark() {
+      System.out.println("  ckp 07 getWatermark");
       return new Instant(watermark);
     }
 
     @Override
     public GeneratorCheckpoint getCheckpointMark() {
+      System.out.println("  ckp 08 getCheckpointMark ");
       return generator.toCheckpoint();
     }
 
     @Override
     public long getSplitBacklogBytes() {
+      System.out.println("  ckp 09 getSplitBacklogBytes ");
       return backlogBytes == null ? BACKLOG_UNKNOWN : backlogBytes;
     }
 
     @Override
     public String toString() {
+     // System.out.println("  ckp 10 ");
       return String.format(
           "EventReader(%d, %d, %d)",
           generator.getCurrentConfig().getStartEventId(),
@@ -292,23 +314,31 @@ public class UnboundedEventSource extends UnboundedSource<Event, GeneratorCheckp
 
   @Override
   public Coder<GeneratorCheckpoint> getCheckpointMarkCoder() {
+    System.out.println("  ckp 11  getCheckpointMarkCoder");
     return GeneratorCheckpoint.CODER_INSTANCE;
   }
 
   @Override
   public List<UnboundedEventSource> split(int desiredNumSplits, PipelineOptions options) {
+    System.out.println("  ckp 12 List<UnboundedEventSource> split");
+   // System.out.println(numEventGenerators);
+   // System.out.println(config.split(numEventGenerators));
+
     LOG.trace("splitting unbounded source into {} sub-sources", numEventGenerators);
     List<UnboundedEventSource> results = new ArrayList<>();
     // Ignore desiredNumSplits and use numEventGenerators instead.
     for (GeneratorConfig subConfig : config.split(numEventGenerators)) {
+      //System.out.println(" 12 subConfig");
       results.add(new UnboundedEventSource(subConfig, 1, watermarkHoldbackSec, isRateLimited));
     }
+    System.out.println("  ckp 12 List<UnboundedEventSource> split finish");
     return results;
   }
 
   @Override
   public EventReader createReader(
       PipelineOptions options, @Nullable GeneratorCheckpoint checkpoint) {
+    System.out.println("  ckp 13  createReader");
     if (checkpoint == null) {
       LOG.trace("creating initial unbounded reader for {}", config);
       return new EventReader(config);
@@ -320,16 +350,19 @@ public class UnboundedEventSource extends UnboundedSource<Event, GeneratorCheckp
 
   @Override
   public void validate() {
+   System.out.println("  ckp 14  validate");
     // Nothing to validate.
   }
 
   @Override
   public Coder<Event> getDefaultOutputCoder() {
+    System.out.println("  ckp 15 getDefaultOutputCoder ");
     return Event.CODER;
   }
 
   @Override
   public String toString() {
+    System.out.println("  ckp 16 toString getStartEventId: "+config.getStartEventId()+" StopEventId: "+config.getStopEventId());
     return String.format(
         "UnboundedEventSource(%d, %d)", config.getStartEventId(), config.getStopEventId());
   }

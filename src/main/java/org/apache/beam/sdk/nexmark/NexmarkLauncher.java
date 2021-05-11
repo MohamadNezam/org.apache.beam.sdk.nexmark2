@@ -173,6 +173,9 @@ public class NexmarkLauncher<OptionT extends NexmarkOptions> {
       }
     }
 
+    //System.out.println("dataEnd: %d ,dataStart: %d ",dataEnd,dataStart);
+    NexmarkUtils.console(
+            "dataEnd: %d ,dataStart: %d ",dataEnd,dataStart);
     int numSamples = dataEnd - dataStart + 1;
     if (numSamples < MIN_SAMPLES) {
       // Not enough samples.
@@ -356,6 +359,7 @@ public class NexmarkLauncher<OptionT extends NexmarkOptions> {
    * measured.
    */
   private @Nullable NexmarkPerf monitor(NexmarkQuery query) {
+    //Todo performance may add
     if (!options.getMonitorJobs()) {
       return null;
     }
@@ -627,6 +631,7 @@ public class NexmarkLauncher<OptionT extends NexmarkOptions> {
 
   /** Return a source of synthetic events. */
   private PCollection<Event> sourceEventsFromSynthetic(Pipeline p) {
+    System.out.print("Step 2: Create Synthetic Events, Batch or Stream mode \n");
     if (isStreaming()) {
       NexmarkUtils.console("Generating %d events in streaming mode", configuration.numEvents);
       return p.apply(queryName + ".ReadUnbounded", NexmarkUtils.streamEventsSource(configuration));
@@ -908,7 +913,8 @@ public class NexmarkLauncher<OptionT extends NexmarkOptions> {
   /** Return source of events for this run, or null if we are simply publishing events to Pubsub. */
   private PCollection<Event> createSource(Pipeline p, final Instant now) throws IOException {
     PCollection<Event> source = null;
-
+    System.out.print("Step 1: Create Source \n");
+   // System.out.print("configuration.sourceType is: " +configuration.sourceType);
     switch (configuration.sourceType) {
       case DIRECT:
         source = sourceEventsFromSynthetic(p);

@@ -29,8 +29,8 @@ import org.apache.beam.vendor.guava.v26_0_jre.com.google.common.collect.Immutabl
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.joda.time.Duration;
 import org.joda.time.Instant;
-import org.apache.log4j.Level;
-import org.apache.log4j.Logger;
+ import org.apache.log4j.Level;
+ import org.apache.log4j.Logger;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -107,7 +107,7 @@ public class Main {
     int nThreads = Math.min(options.getNexmarkParallel(), configurations.size());
     ExecutorService executor = Executors.newFixedThreadPool(nThreads);
     CompletionService<Result> completion = new ExecutorCompletionService(executor);
-
+    System.out.print("Main 1: \n");
     boolean successful = true;
     try {
       // Schedule all the configurations.
@@ -484,7 +484,7 @@ public class Main {
   }
 
   public static void main(String[] args) throws IOException {
-    Logger.getLogger("org").setLevel(Level.ERROR);
+     Logger.getLogger("org").setLevel(Level.ERROR);
     new Main().runAll(args);
   }
 }
